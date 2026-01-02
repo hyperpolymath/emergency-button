@@ -2,12 +2,12 @@
 // Safe diagnostic capture modules
 // Best-effort, non-destructive data collection
 // HIGH-004 fix: PII redaction applied to all captured output
+// CRIT-004 fix: Use string matching instead of regex (V regex doesn't support PCRE)
 
 module main
 
 import os
 import time
-import regex
 
 struct CaptureResult {
 	name       string
@@ -17,41 +17,194 @@ struct CaptureResult {
 	duration   i64
 }
 
-// PII patterns to redact from captured output
-const pii_patterns = [
-	// Passwords and secrets in key=value format
-	r'(?i)(password|passwd|pwd|secret|token|api[_-]?key|auth[_-]?token|access[_-]?token|private[_-]?key)\s*[=:]\s*\S+',
-	// AWS keys
-	r'(?i)(AKIA|ABIA|ACCA|ASIA)[0-9A-Z]{16}',
-	r'(?i)aws[_-]?secret[_-]?access[_-]?key\s*[=:]\s*\S+',
-	// Generic API keys (40+ char hex/base64 strings after key indicators)
-	r'(?i)(api[_-]?key|secret[_-]?key|auth[_-]?key)\s*[=:]\s*[A-Za-z0-9+/=]{20,}',
-	// Email addresses
-	r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
-	// Credit card numbers (basic pattern)
-	r'\b(?:\d{4}[- ]?){3}\d{4}\b',
-	// SSN patterns
-	r'\b\d{3}-\d{2}-\d{4}\b',
-	// Private keys
-	r'-----BEGIN\s+(RSA\s+)?PRIVATE\s+KEY-----',
-	// Bearer tokens
-	r'(?i)bearer\s+[A-Za-z0-9._-]+',
-	// GitHub tokens
-	r'(?i)(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36,}',
-	// Environment variable assignments with sensitive names
-	r'(?i)export\s+(PASSWORD|SECRET|TOKEN|API_KEY|PRIVATE_KEY)\s*=\s*\S+',
+// Sensitive keywords that indicate PII when followed by = or :
+const sensitive_keys = [
+	'password', 'passwd', 'pwd', 'secret', 'token',
+	'api_key', 'api-key', 'apikey',
+	'auth_token', 'auth-token', 'authtoken',
+	'access_token', 'access-token', 'accesstoken',
+	'private_key', 'private-key', 'privatekey',
+	'aws_secret', 'aws-secret',
+	'bearer',
 ]
 
-// Redact sensitive information from captured output
-fn redact_pii(content string) string {
-	mut result := content
+// Prefixes that indicate sensitive tokens (case-insensitive check)
+const sensitive_prefixes = [
+	'akia', 'abia', 'acca', 'asia',  // AWS keys
+	'ghp_', 'gho_', 'ghu_', 'ghs_', 'ghr_',  // GitHub tokens
+]
 
-	for pattern in pii_patterns {
-		mut re := regex.regex_opt(pattern) or { continue }
-		result = re.replace(result, '[REDACTED]')
+// CRIT-004: Redact sensitive information using string matching
+// V's regex engine doesn't support PCRE lookaheads, so use direct string parsing
+fn redact_pii(content string) string {
+	mut lines := content.split('\n')
+	mut result := []string{}
+
+	for line in lines {
+		result << redact_line(line)
+	}
+
+	return result.join('\n')
+}
+
+// Redact a single line for PII
+fn redact_line(line string) string {
+	lower := line.to_lower()
+	mut redacted := line
+
+	// Check for sensitive key=value or key: value patterns
+	for key in sensitive_keys {
+		if lower.contains(key) {
+			// Find and redact the value after = or :
+			redacted = redact_after_key(redacted, key, '=')
+			redacted = redact_after_key(redacted, key, ':')
+		}
+	}
+
+	// Check for AWS/GitHub token prefixes
+	for prefix in sensitive_prefixes {
+		if lower.contains(prefix) {
+			redacted = redact_token_prefix(redacted, prefix)
+		}
+	}
+
+	// Check for private key markers
+	if lower.contains('-----begin') && lower.contains('private key') {
+		redacted = '[REDACTED PRIVATE KEY BLOCK]'
+	}
+
+	// Check for SSN pattern (###-##-####)
+	redacted = redact_ssn(redacted)
+
+	// Check for email patterns (simple check)
+	redacted = redact_emails(redacted)
+
+	return redacted
+}
+
+// Redact value after a key and separator
+fn redact_after_key(line string, key string, sep string) string {
+	lower := line.to_lower()
+	key_pos := lower.index(key) or { return line }
+
+	// Find separator after key
+	rest := line[key_pos + key.len..]
+	sep_pos := rest.index(sep) or { return line }
+
+	// Find the value (non-whitespace after separator)
+	value_start := key_pos + key.len + sep_pos + 1
+	if value_start >= line.len {
+		return line
+	}
+
+	// Skip whitespace
+	mut start := value_start
+	for start < line.len && line[start] in [` `, `\t`] {
+		start++
+	}
+
+	// Find end of value (whitespace or end)
+	mut end := start
+	for end < line.len && line[end] !in [` `, `\t`, `\n`, `\r`] {
+		end++
+	}
+
+	if end > start {
+		return line[..start] + '[REDACTED]' + line[end..]
+	}
+	return line
+}
+
+// Redact tokens starting with specific prefixes
+fn redact_token_prefix(line string, prefix string) string {
+	lower := line.to_lower()
+	pos := lower.index(prefix) or { return line }
+
+	// Find end of token (alphanumeric + underscore)
+	mut end := pos + prefix.len
+	for end < line.len {
+		c := line[end]
+		is_token_char := (c >= `a` && c <= `z`) ||
+			(c >= `A` && c <= `Z`) ||
+			(c >= `0` && c <= `9`) ||
+			c == `_` || c == `-`
+		if !is_token_char {
+			break
+		}
+		end++
+	}
+
+	if end > pos + prefix.len {
+		return line[..pos] + '[REDACTED]' + line[end..]
+	}
+	return line
+}
+
+// Redact SSN patterns (###-##-####)
+fn redact_ssn(line string) string {
+	mut result := line
+	mut i := 0
+
+	for i < result.len - 10 {
+		// Check for ###-##-####
+		if is_digit(result[i]) && is_digit(result[i + 1]) && is_digit(result[i + 2]) &&
+			result[i + 3] == `-` &&
+			is_digit(result[i + 4]) && is_digit(result[i + 5]) &&
+			result[i + 6] == `-` &&
+			is_digit(result[i + 7]) && is_digit(result[i + 8]) &&
+			is_digit(result[i + 9]) && is_digit(result[i + 10]) {
+			result = result[..i] + '[REDACTED-SSN]' + result[i + 11..]
+			i += 14  // Length of [REDACTED-SSN]
+		} else {
+			i++
+		}
 	}
 
 	return result
+}
+
+// Redact email addresses (simple pattern: word@word.word)
+fn redact_emails(line string) string {
+	mut result := line
+	at_pos := result.index('@') or { return result }
+
+	// Find start of email (word before @)
+	mut start := at_pos
+	for start > 0 && is_email_char(result[start - 1]) {
+		start--
+	}
+
+	// Find end of email (word.word after @)
+	mut end := at_pos + 1
+	mut has_dot := false
+	for end < result.len {
+		c := result[end]
+		if c == `.` {
+			has_dot = true
+			end++
+		} else if is_email_char(c) {
+			end++
+		} else {
+			break
+		}
+	}
+
+	if has_dot && end > at_pos + 3 && start < at_pos {
+		result = result[..start] + '[REDACTED-EMAIL]' + result[end..]
+	}
+
+	return result
+}
+
+fn is_digit(c u8) bool {
+	return c >= `0` && c <= `9`
+}
+
+fn is_email_char(c u8) bool {
+	return (c >= `a` && c <= `z`) ||
+		(c >= `A` && c <= `Z`) ||
+		(c >= `0` && c <= `9`) ||
+		c == `.` || c == `_` || c == `-` || c == `+` || c == `%`
 }
 
 fn capture_diagnostics(mut incident Incident, config Config) {

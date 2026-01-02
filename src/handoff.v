@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Handoff logic to specialized tools (psa, big-up)
+// CRIT-001 fix: Path validation to prevent command injection
 
 module main
 
@@ -12,7 +13,35 @@ struct HandoffTarget {
 	description string
 }
 
+// CRIT-001: Validate path contains only safe characters
+// Prevents shell injection via incident.path
+fn validate_safe_path(path string) bool {
+	// Allow only alphanumeric, dash, underscore, dot, forward slash
+	// Explicitly reject: semicolon, pipe, backtick, $, &, >, <, etc.
+	for c in path {
+		is_safe := (c >= `a` && c <= `z`) ||
+			(c >= `A` && c <= `Z`) ||
+			(c >= `0` && c <= `9`) ||
+			c == `-` || c == `_` || c == `.` || c == `/`
+		if !is_safe {
+			return false
+		}
+	}
+	// Also reject empty paths and paths with ..
+	if path.len == 0 || path.contains('..') {
+		return false
+	}
+	return true
+}
+
 fn handoff(incident Incident, config Config) {
+	// CRIT-001: Validate incident path before using in shell commands
+	if !validate_safe_path(incident.path) {
+		eprintln('${c_red}[ERROR]${c_reset} Invalid incident path detected (possible injection attempt)')
+		eprintln('${c_yellow}[INFO]${c_reset} Path must contain only alphanumeric, dash, underscore, dot, slash')
+		return
+	}
+
 	// Try to find specialized tools in order of preference
 	targets := [
 		HandoffTarget{
