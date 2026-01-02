@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Safe diagnostic capture modules
 // Best-effort, non-destructive data collection
+// HIGH-004 fix: PII redaction applied to all captured output
 
 module main
 
 import os
 import time
+import regex
 
 struct CaptureResult {
 	name       string
@@ -13,6 +15,43 @@ struct CaptureResult {
 	output     string
 	error_msg  string
 	duration   i64
+}
+
+// PII patterns to redact from captured output
+const pii_patterns = [
+	// Passwords and secrets in key=value format
+	r'(?i)(password|passwd|pwd|secret|token|api[_-]?key|auth[_-]?token|access[_-]?token|private[_-]?key)\s*[=:]\s*\S+',
+	// AWS keys
+	r'(?i)(AKIA|ABIA|ACCA|ASIA)[0-9A-Z]{16}',
+	r'(?i)aws[_-]?secret[_-]?access[_-]?key\s*[=:]\s*\S+',
+	// Generic API keys (40+ char hex/base64 strings after key indicators)
+	r'(?i)(api[_-]?key|secret[_-]?key|auth[_-]?key)\s*[=:]\s*[A-Za-z0-9+/=]{20,}',
+	// Email addresses
+	r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
+	// Credit card numbers (basic pattern)
+	r'\b(?:\d{4}[- ]?){3}\d{4}\b',
+	// SSN patterns
+	r'\b\d{3}-\d{2}-\d{4}\b',
+	// Private keys
+	r'-----BEGIN\s+(RSA\s+)?PRIVATE\s+KEY-----',
+	// Bearer tokens
+	r'(?i)bearer\s+[A-Za-z0-9._-]+',
+	// GitHub tokens
+	r'(?i)(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36,}',
+	// Environment variable assignments with sensitive names
+	r'(?i)export\s+(PASSWORD|SECRET|TOKEN|API_KEY|PRIVATE_KEY)\s*=\s*\S+',
+]
+
+// Redact sensitive information from captured output
+fn redact_pii(content string) string {
+	mut result := content
+
+	for pattern in pii_patterns {
+		mut re := regex.regex_opt(pattern) or { continue }
+		result = re.replace(result, '[REDACTED]')
+	}
+
+	return result
 }
 
 fn capture_diagnostics(mut incident Incident, config Config) {
@@ -76,10 +115,12 @@ fn run_capture_module(mod CaptureModule, incident Incident, config Config) Captu
 		}
 	}
 
-	output := outputs.join('\n')
+	raw_output := outputs.join('\n')
+	// HIGH-004: Apply PII redaction before writing
+	output := redact_pii(raw_output)
 	duration := time.now() - start
 
-	// Write to log file
+	// Write to log file (with PII redacted)
 	if !config.dry_run && output.len > 0 {
 		log_file := os.join_path(incident.logs_path, '${mod.name}.log')
 		os.write_file(log_file, output) or {

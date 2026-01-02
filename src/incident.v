@@ -6,6 +6,7 @@ module main
 import os
 import time
 import json
+import rand
 
 struct Incident {
 	id         string
@@ -51,8 +52,13 @@ struct TriggerInfo {
 
 fn create_incident_bundle(config Config) !Incident {
 	now := time.now()
+	// HIGH-005 fix: Use nanoseconds + random suffix to prevent ID collisions
+	// Format: incident-YYYYMMDD-HHmmss-nnnnnnnnn-XXXX
+	// where nnnnnnnnn is nanoseconds and XXXX is random hex
 	timestamp := now.custom_format('YYYYMMDD-HHmmss')
-	incident_id := 'incident-${timestamp}'
+	nanos := now.nanosecond
+	random_suffix := rand.hex(4)  // 4 random hex chars
+	incident_id := 'incident-${timestamp}-${nanos:09d}-${random_suffix}'
 
 	// Determine base directory (current working directory)
 	base_dir := os.getwd()

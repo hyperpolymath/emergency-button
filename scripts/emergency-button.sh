@@ -1,8 +1,15 @@
 #!/bin/bash
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Emergency system cleanup and diagnostics script
+# MED-008 fix: Safe glob handling
 
 set -uo pipefail
+
+# Enable nullglob so non-matching globs expand to nothing
+shopt -s nullglob
+
+# Disable globbing in unexpected places
+set -o noglob
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -46,9 +53,17 @@ declare -a cache_dirs=(
 )
 
 freed=0
+# MED-008: Temporarily enable globbing for cache directory expansion
+set +o noglob
 for dir in "${cache_dirs[@]}"; do
+    # Expand glob patterns safely
     for expanded in $dir; do
-        if [[ -d "$expanded" ]]; then
+        # Validate path is under user's home directory (prevent traversal)
+        if [[ "$expanded" != "$HOME"* ]]; then
+            warn "Skipping path outside home: $expanded"
+            continue
+        fi
+        if [[ -d "$expanded" && ! -L "$expanded" ]]; then
             size=$(du -sb "$expanded" 2>/dev/null | cut -f1 || echo 0)
             rm -rf "$expanded" 2>/dev/null && {
                 freed=$((freed + size))
@@ -57,6 +72,7 @@ for dir in "${cache_dirs[@]}"; do
         fi
     done
 done
+set -o noglob
 
 if [[ $freed -gt 1073741824 ]]; then
     info "Freed: $((freed / 1073741824))G"
