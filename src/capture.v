@@ -274,9 +274,10 @@ fn run_capture_module(mod CaptureModule, incident Incident, config Config) Captu
 	duration := time.now() - start
 
 	// Write to log file (with PII redacted)
+	// HIGH-006: Use atomic write to prevent corruption
 	if !config.dry_run && output.len > 0 {
 		log_file := os.join_path(incident.logs_path, '${mod.name}.log')
-		os.write_file(log_file, output) or {
+		atomic_write_file(log_file, output) or {
 			return CaptureResult{
 				name: mod.name
 				success: false

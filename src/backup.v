@@ -261,7 +261,8 @@ fn log_backup_plan(incident Incident, plan BackupPlan, config Config) {
 		return
 	}
 
-	os.write_file(log_path, lines.join('\n')) or {
+	// HIGH-006: Use atomic write to prevent corruption
+	atomic_write_file(log_path, lines.join('\n')) or {
 		eprintln('${c_yellow}[WARN]${c_reset} Could not write backup plan: ${err}')
 	}
 }
@@ -278,7 +279,8 @@ Directories failed: ${failed}
 Status: ${if failed == 0 { 'SUCCESS' } else { 'PARTIAL' }}
 '
 
-	os.write_file(log_path, content) or {
+	// HIGH-006: Use atomic write to prevent corruption
+	atomic_write_file(log_path, content) or {
 		eprintln('${c_yellow}[WARN]${c_reset} Could not write backup result: ${err}')
 	}
 }

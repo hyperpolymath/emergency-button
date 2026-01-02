@@ -133,7 +133,8 @@ fn write_incident_json(incident Incident, config Config) ! {
 	}
 
 	json_path := os.join_path(incident.path, 'incident.json')
-	os.write_file(json_path, json_content) or {
+	// HIGH-006: Use atomic write to prevent corruption
+	atomic_write_file(json_path, json_content) or {
 		return error('Failed to write incident.json: ${err}')
 	}
 }
@@ -230,7 +231,8 @@ fn write_receipt(incident Incident, config Config) ! {
 		return
 	}
 
-	os.write_file(receipt_path, content.join('\n')) or {
+	// HIGH-006: Use atomic write to prevent corruption
+	atomic_write_file(receipt_path, content.join('\n')) or {
 		return error('Failed to write receipt: ${err}')
 	}
 

@@ -139,7 +139,8 @@ Command: ${target.command} ${target.args.join(' ')}
 Description: ${target.description}
 '
 
-	os.write_file(handoff_log, content) or {
+	// HIGH-006: Use atomic write to prevent corruption
+	atomic_write_file(handoff_log, content) or {
 		eprintln('${c_yellow}[WARN]${c_reset} Could not write handoff log: ${err}')
 	}
 }
