@@ -1,0 +1,159 @@
+= Emergency Button
+:toc: macro
+:toc-title: Contents
+:toclevels: 3
+:icons: font
+
+[.lead]
+*When everything is on fire, press this button.* One-click emergency system recovery for the moments when you need it most.
+
+[IMPORTANT]
+====
+This is the tool you reach for when:
+
+* Your disk is 100% full and nothing works
+* Your system is unresponsive and you're panicking
+* You have 5 minutes before a presentation and something broke
+* It's 2am and you just need it to *work*
+====
+
+toc::[]
+
+== Philosophy
+
+Emergency Button is designed for *immediate crises*. It's not a system administration tool—it's a fire extinguisher.
+
+|===
+|Emergency Button |Other Tools
+
+|Panic mode |Calm, methodical
+|One button |Many options
+|Immediate relief |Long-term solutions
+|Works offline |May need connectivity
+|No configuration |Highly configurable
+|Safe defaults |Powerful options
+|===
+
+== The Button
+
+[source,bash]
+----
+emergency-button
+----
+
+That's it. One command. One button.
+
+== Ecosystem Integration
+
+Emergency Button is the *first responder*. After stabilization, hand off to specialized tools:
+
+[source]
+----
+                         CRISIS
+                           ↓
+                   ┌───────────────┐
+                   │ EMERGENCY     │  ← You are here
+                   │ BUTTON        │
+                   └───────┬───────┘
+                           ↓
+         ┌─────────────────┼─────────────────┐
+         ↓                 ↓                 ↓
+┌─────────────────┐ ┌─────────────┐ ┌─────────────────┐
+│ complete-       │ │ jusys       │ │ big-up          │
+│ internet-repair │ │             │ │ (D-based)       │
+└────────┬────────┘ └──────┬──────┘ └────────┬────────┘
+         ↓                 ↓                 ↓
+┌─────────────────┐ ┌─────────────┐ ┌─────────────────┐
+│ Network         │ │ System      │ │ Advanced        │
+│ Recovery        │ │ Management  │ │ Diagnostics     │
+└─────────────────┘ └──────┬──────┘ └─────────────────┘
+                           ↓
+                  ┌─────────────────┐
+                  │ feedback-o-tron │
+                  │ personal-       │
+                  │ sysadmin        │
+                  └─────────────────┘
+                           ↓
+                   STABILITY RESTORED
+----
+
+=== Related Tools (hyperpolymath ecosystem)
+
+|===
+|Tool |Purpose |When to use
+
+|*emergency-button*
+|Immediate crisis response
+|System on fire, need it fixed NOW
+
+|*complete-internet-repair*
+|Network connectivity recovery
+|Internet broken, can't connect
+
+|*jusys*
+|System management
+|After stability, ongoing maintenance
+
+|*big-up*
+|Advanced diagnostics (D-based)
+|Power users, deep system introspection
+
+|*feedback-o-tron*
+|Incident reporting
+|Document what went wrong
+
+|*personal-sysadmin*
+|Preventive maintenance
+|Long-term system health
+|===
+
+== Core Capabilities
+
+=== Disk Emergency
+* Identify space consumers
+* Clear safe caches
+* Report large/old files
+* Prune containers
+
+=== Memory Emergency
+* Identify memory hogs
+* Offer to kill safe targets
+* Clear filesystem caches
+
+=== Process Emergency
+* Identify CPU hogs
+* Kill/nice runaway processes
+
+=== Network Emergency → handoff to complete-internet-repair
+* Quick connectivity check
+* Handoff to specialized tool
+
+== Safety Guarantees
+
+Emergency Button will *never*:
+
+* Delete user data without confirmation
+* Modify system configuration
+* Require root for basic operations
+* Make things worse
+
+== Usage
+
+[source,bash]
+----
+# Interactive (default)
+emergency-button
+
+# Headless (for scripts)
+emergency-button --headless --safe-only
+
+# Dry run
+emergency-button --dry-run
+
+# Maximum safe cleanup, minimal prompts
+emergency-button --panic
+----
+
+== License
+
+AGPL-3.0-or-later
