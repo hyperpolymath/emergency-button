@@ -183,6 +183,19 @@ system-emergency-room --panic
 NOTE: V was chosen for A&E because panic-safe intake requires *verification* that actions are safe before taking them.
 This aligns with the AmbientOps layer model where V handles "is this allowed / true / safe?" decisions.
 
+== Ecosystem Analysis
+
+For a comprehensive analysis of integration seams, failure modes, and security considerations across the entire AmbientOps System Tools ecosystem, see:
+
+link:https://github.com/hyperpolymath/system-operating-theatre/blob/main/docs/SEAM-ANALYSIS.adoc[SEAM-ANALYSIS.adoc] in system-operating-theatre
+
+This analysis covers:
+
+* Command injection prevention
+* PII redaction patterns
+* Incident ID collision avoidance
+* Cross-system error handling
+
 == License
 
 AGPL-3.0-or-later.
