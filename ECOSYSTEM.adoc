@@ -22,7 +22,7 @@ A unified toolkit for Linux system health—from emergency response to preventiv
 │   │  recovery. Disk,    │───▶│  Network connectivity   │               │
 │   │  memory, process    │    │  diagnosis & repair     │               │
 │   │  emergencies.       │    │                         │               │
-│   │  [Shell/ReScript]   │    │  [Planned]              │               │
+│   │  [V language]        │    │  [Planned]              │               │
 │   └──────────┬──────────┘    └─────────────────────────┘               │
 │              │                                                          │
 │              ▼                                                          │
@@ -65,7 +65,7 @@ A unified toolkit for Linux system health—from emergency response to preventiv
 
 |emergency-button
 |✓ Active
-|Shell → ReScript
+|V language
 |Crisis response
 |Everyone
 
