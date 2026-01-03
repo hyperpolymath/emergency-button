@@ -241,6 +241,8 @@ fn log_backup_plan(incident Incident, plan BackupPlan, config Config) {
 	log_path := os.join_path(incident.logs_path, 'backup_plan.log')
 
 	mut lines := []string{}
+	lines << 'schema_version: ${schema_version}'
+	lines << ''
 	lines << 'Quick Backup Plan'
 	lines << '================='
 	lines << ''
@@ -270,7 +272,9 @@ fn log_backup_plan(incident Incident, plan BackupPlan, config Config) {
 fn log_backup_result(incident Incident, backup_dir string, copied int, failed int) {
 	log_path := os.join_path(incident.logs_path, 'backup_result.log')
 
-	content := 'Backup Result
+	content := 'schema_version: ${schema_version}
+
+Backup Result
 =============
 
 Backup directory: ${backup_dir}

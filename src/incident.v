@@ -106,7 +106,7 @@ fn create_incident_bundle(config Config) !Incident {
 
 fn write_incident_json(incident Incident, config Config) ! {
 	envelope := IncidentEnvelope{
-		schema_version: '1.0'
+		schema_version: schema_version  // Use constant from utils.v
 		id: incident.id
 		created_at: incident.created_at.format_rfc3339()
 		hostname: os.hostname() or { 'unknown' }

@@ -7,7 +7,7 @@ import time
 
 fn test_incident_envelope_has_required_fields() {
 	envelope := IncidentEnvelope{
-		schema_version: '1.0'
+		schema_version: schema_version  // Use constant from utils.v
 		id: 'incident-test-123'
 		created_at: time.now().format_rfc3339()
 		hostname: 'test-host'
@@ -26,7 +26,7 @@ fn test_incident_envelope_has_required_fields() {
 		commands: []
 	}
 
-	assert envelope.schema_version == '1.0'
+	assert envelope.schema_version == schema_version
 	assert envelope.id.starts_with('incident-')
 	assert envelope.hostname.len > 0
 	assert envelope.platform.os.len > 0

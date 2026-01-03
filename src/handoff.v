@@ -134,7 +134,9 @@ fn log_handoff(incident Incident, target HandoffTarget, config Config) {
 	}
 
 	handoff_log := os.join_path(incident.logs_path, 'handoff.log')
-	content := 'Handoff to: ${target.name}
+	content := 'schema_version: ${schema_version}
+
+Handoff to: ${target.name}
 Command: ${target.command} ${target.args.join(' ')}
 Description: ${target.description}
 '
