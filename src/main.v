@@ -88,6 +88,7 @@ fn run_trigger(args []string) {
 	// Create incident bundle
 	mut incident := create_incident_bundle(config) or {
 		eprintln('${c_red}[ERROR]${c_reset} Failed to create incident bundle: ${err}')
+		// Note: Can't use structured logging here as incident doesn't exist yet
 		exit(1)
 	}
 
@@ -101,6 +102,7 @@ fn run_trigger(args []string) {
 	// Write receipt
 	write_receipt(incident, config) or {
 		eprintln('${c_yellow}[WARN]${c_reset} Could not write receipt: ${err}')
+		log_warn(incident.logs_path, 'main', 'Could not write receipt: ${err}')
 	}
 
 	// Quick backup if requested

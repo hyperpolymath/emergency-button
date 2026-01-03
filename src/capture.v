@@ -278,6 +278,11 @@ fn run_capture_module(mod CaptureModule, incident Incident, config Config) Captu
 	if !config.dry_run && output.len > 0 {
 		log_file := os.join_path(incident.logs_path, '${mod.name}.log')
 		atomic_write_file(log_file, output) or {
+			// HIGH-008: Log structured error
+			log_error(incident.logs_path, 'capture', 'Failed to write log for ${mod.name}', {
+				'module': mod.name
+				'error': err.str()
+			})
 			return CaptureResult{
 				name: mod.name
 				success: false

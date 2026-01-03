@@ -8,7 +8,7 @@ import os
 import time
 
 // Shell metacharacters that could enable injection attacks
-const shell_dangerous_chars = [`;`, `|`, `&`, `$`, `\``, `(`, `)`, `{`, `}`, `[`, `]`, `<`, `>`, `\n`, `\r`, `*`, `?`, `~`, `!`, `#`]
+const shell_dangerous_chars = [';', '|', '&', r'$', '`', '(', ')', '{', '}', '[', ']', '<', '>', '\n', '\r', '*', '?', '~', '!', '#']
 
 // Validate a path is safe for shell interpolation
 // Returns error if path contains dangerous characters
@@ -57,11 +57,17 @@ fn run_quick_backup(incident Incident, config Config) {
 	if !os.exists(dest) {
 		eprintln('${c_red}[ERROR]${c_reset} Backup destination does not exist: ${dest}')
 		eprintln('${c_blue}[INFO]${c_reset} Please create the directory first or mount the drive.')
+		log_error(incident.logs_path, 'backup', 'Backup destination does not exist', {
+			'destination': dest
+		})
 		return
 	}
 
 	if !os.is_dir(dest) {
 		eprintln('${c_red}[ERROR]${c_reset} Backup destination is not a directory: ${dest}')
+		log_error(incident.logs_path, 'backup', 'Backup destination is not a directory', {
+			'destination': dest
+		})
 		return
 	}
 
@@ -169,6 +175,10 @@ fn perform_backup(plan BackupPlan, incident Incident, config Config) {
 	// CRIT-002 fix: Validate destination path before use
 	safe_dest := validate_safe_path(plan.dest_path) or {
 		eprintln('${c_red}[ERROR]${c_reset} Invalid backup destination path: ${err}')
+		log_error(incident.logs_path, 'backup', 'Invalid backup destination path', {
+			'path': plan.dest_path
+			'error': err.str()
+		})
 		return
 	}
 
@@ -176,6 +186,10 @@ fn perform_backup(plan BackupPlan, incident Incident, config Config) {
 
 	os.mkdir_all(backup_dir) or {
 		eprintln('${c_red}[ERROR]${c_reset} Failed to create backup directory: ${err}')
+		log_error(incident.logs_path, 'backup', 'Failed to create backup directory', {
+			'directory': backup_dir
+			'error': err.str()
+		})
 		return
 	}
 
@@ -190,6 +204,7 @@ fn perform_backup(plan BackupPlan, incident Incident, config Config) {
 		// CRIT-002 fix: Validate source path before shell interpolation
 		safe_source := validate_safe_path(dir) or {
 			eprintln('${c_yellow}[WARN]${c_reset} Skipping unsafe path: ${dir}')
+			log_warn(incident.logs_path, 'backup', 'Skipping unsafe source path: ${dir}')
 			failed++
 			continue
 		}
@@ -200,6 +215,7 @@ fn perform_backup(plan BackupPlan, incident Incident, config Config) {
 		// Validate constructed destination path
 		safe_dest_dir := validate_safe_path(dest_dir) or {
 			eprintln('${c_yellow}[WARN]${c_reset} Skipping invalid destination: ${dest_dir}')
+			log_warn(incident.logs_path, 'backup', 'Skipping invalid destination: ${dest_dir}')
 			failed++
 			continue
 		}

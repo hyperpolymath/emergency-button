@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Shared utilities for system-emergency-room
 // HIGH-006: Atomic file writes with temp+rename pattern
+// HIGH-008: Structured logging infrastructure
 
 module main
 
 import os
 import rand
+import time
 
 // Atomic write: write to temp file, then rename
 // Prevents file corruption if process crashes during write
@@ -60,4 +62,39 @@ fn format_log_entry(entry LogEntry) string {
 	}
 
 	return parts.join(' ')
+}
+
+// Write a structured log entry to the incident's structured.log file
+fn log_structured(logs_path string, level string, component string, message string, context map[string]string) {
+	log_file := os.join_path(logs_path, 'structured.log')
+
+	entry := LogEntry{
+		timestamp: time.now().format_rfc3339()
+		level: level
+		component: component
+		message: message
+		context: context
+	}
+
+	line := format_log_entry(entry) + '\n'
+
+	// Append to log file (best effort - don't fail on logging errors)
+	atomic_append_file(log_file, line) or {}
+}
+
+// Convenience functions for each log level
+fn log_info(logs_path string, component string, message string) {
+	log_structured(logs_path, 'info', component, message, map[string]string{})
+}
+
+fn log_warn(logs_path string, component string, message string) {
+	log_structured(logs_path, 'warn', component, message, map[string]string{})
+}
+
+fn log_error(logs_path string, component string, message string, context map[string]string) {
+	log_structured(logs_path, 'error', component, message, context)
+}
+
+fn log_debug(logs_path string, component string, message string) {
+	log_structured(logs_path, 'debug', component, message, map[string]string{})
 }

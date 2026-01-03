@@ -13,9 +13,9 @@ struct HandoffTarget {
 	description string
 }
 
-// CRIT-001: Validate path contains only safe characters
+// CRIT-001: Check if path contains only safe characters
 // Prevents shell injection via incident.path
-fn validate_safe_path(path string) bool {
+fn is_path_safe(path string) bool {
 	// Allow only alphanumeric, dash, underscore, dot, forward slash
 	// Explicitly reject: semicolon, pipe, backtick, $, &, >, <, etc.
 	for c in path {
@@ -36,9 +36,12 @@ fn validate_safe_path(path string) bool {
 
 fn handoff(incident Incident, config Config) {
 	// CRIT-001: Validate incident path before using in shell commands
-	if !validate_safe_path(incident.path) {
+	if !is_path_safe(incident.path) {
 		eprintln('${c_red}[ERROR]${c_reset} Invalid incident path detected (possible injection attempt)')
 		eprintln('${c_yellow}[INFO]${c_reset} Path must contain only alphanumeric, dash, underscore, dot, slash')
+		log_error(incident.logs_path, 'handoff', 'Invalid incident path detected (possible injection attempt)', {
+			'path': incident.path
+		})
 		return
 	}
 
